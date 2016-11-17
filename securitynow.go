@@ -78,9 +78,11 @@ func (m *MP3) LowQuality(i int) (int64, error) {
 		}
 		// no bytes copied == done
 		if n == 0 {
-			return b, nil
+			break
 		}
 	}
+	printDownloadMessage(i, b, file)
+	return b, nil
 }
 
 // HighQuality downloads the high quality 64Kbps version of an episode.
@@ -111,9 +113,11 @@ func (m *MP3) HighQuality(i int) (int64, error) {
 		}
 		// no bytes copied == done
 		if n == 0 {
-			return b, nil
+			break
 		}
 	}
+	printDownloadMessage(i, b, file)
+	return b, nil
 }
 
 // GetLastEpisodenNumber returns the number of the most recent episode. This
@@ -206,4 +210,8 @@ func setEpisodeRange(i int, cnf *Conf) error {
 		cnf.startEpisode = 1
 	}
 	return nil
+}
+
+func printDownloadMessage(episode int, n int64, name string) {
+	fmt.Printf("downloaded episode %d, totalling %d bytes, as %s\n", episode, n, name)
 }
