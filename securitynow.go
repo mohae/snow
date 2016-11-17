@@ -56,7 +56,7 @@ func lastEpisodeFromTokens(tokens []html.Token) (int, error) {
 
 // getTokens returns all tokens in the body
 func getTokens(body io.Reader) []html.Token {
-	tokens := make([]html.Token, 0)
+	var tokens []html.Token
 	page := html.NewTokenizer(body)
 	for {
 		typ := page.Next()
@@ -65,4 +65,36 @@ func getTokens(body io.Reader) []html.Token {
 		}
 		tokens = append(tokens, page.Token())
 	}
+}
+
+func setEpisodeRange(i int, cnf *Conf) error {
+
+	// if there's a startEpisode make sure it's within range
+	if cnf.startEpisode > 0 {
+		if cnf.startEpisode > i {
+			return fmt.Errorf("Nothing to do: the start episode, %d, does not yet exist. The last episode was %d.", cnf.startEpisode, i)
+		}
+
+		if cnf.stopEpisode > i || cnf.stopEpisode == 0 {
+			cnf.stopEpisode = i
+		}
+
+		return nil
+	}
+
+	// lastN processing means we'll always stop at current episode
+	cnf.stopEpisode = i
+
+	// if lastN processing is being done, set the start point
+	if cnf.lastN > 0 {
+		cnf.startEpisode = i - cnf.lastN + 1
+		// make sure it's within range
+		if cnf.startEpisode < 0 {
+			cnf.startEpisode = 1
+		}
+	} else {
+		// otherwise everything will be downloaded, start at episode 1
+		cnf.startEpisode = 1
+	}
+	return nil
 }

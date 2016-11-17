@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 )
 
@@ -118,5 +119,76 @@ func TestGetLastEpisode(t *testing.T) {
 	if n != expected {
 		t.Errorf("got %d; want %d", n, expected)
 		return
+	}
+}
+
+func TestSetEpisodeRange(t *testing.T) {
+	tests := []struct {
+		i           int
+		cnf         Conf
+		expected    Conf
+		expectedErr string
+	}{
+		{
+			i:           100,
+			cnf:         Conf{lastN: 0, startEpisode: 0, stopEpisode: 0},
+			expected:    Conf{lastN: 0, startEpisode: 1, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 10, startEpisode: 0, stopEpisode: 0},
+			expected:    Conf{lastN: 10, startEpisode: 91, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 110, startEpisode: 0, stopEpisode: 0},
+			expected:    Conf{lastN: 110, startEpisode: 1, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 0, startEpisode: 110, stopEpisode: 0},
+			expected:    Conf{lastN: 0, startEpisode: 0, stopEpisode: 0},
+			expectedErr: "Nothing to do: the start episode, 110, does not yet exist. The last episode was 100.",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 0, startEpisode: 42, stopEpisode: 0},
+			expected:    Conf{lastN: 0, startEpisode: 42, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 0, startEpisode: 42, stopEpisode: 101},
+			expected:    Conf{lastN: 0, startEpisode: 42, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 0, startEpisode: 11, stopEpisode: 42},
+			expected:    Conf{lastN: 0, startEpisode: 11, stopEpisode: 42},
+			expectedErr: "",
+		},
+		{
+			i:           100,
+			cnf:         Conf{lastN: 10, startEpisode: 11, stopEpisode: 42},
+			expected:    Conf{lastN: 10, startEpisode: 11, stopEpisode: 42},
+			expectedErr: "",
+		},
+	}
+
+	for i, test := range tests {
+		err := setEpisodeRange(test.i, &test.cnf)
+		if err != nil {
+			if err.Error() != test.expectedErr {
+				t.Errorf("%d: got %q; want %q", i, err.Error(), test.expectedErr)
+			}
+			continue
+		}
+		if !reflect.DeepEqual(test.cnf, test.expected) {
+			t.Errorf("%d: got %v; want %v", i, test.cnf, test.expected)
+		}
 	}
 }

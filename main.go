@@ -57,6 +57,19 @@ func main() {
 	i, err := GetLastEpisodeNumber()
 	if err != nil {
 		fmt.Println("error:", err)
+		return
 	}
-	fmt.Println(i)
+
+	// if the last episode is 0, something went wrong.
+	if i == 0 {
+		fmt.Println("error: snow encountered an unknown problem while processing episode information, the last episode was 0")
+		return
+	}
+
+	// set the Start Stop info
+	err = setEpisodeRange(i, &conf)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 }
