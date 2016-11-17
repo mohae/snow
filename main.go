@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	UA  = "snow"                                // UserAgent for snow
-	URL = "https://www.grc.com/securitynow.htm" // url of main security now page.
+	UA    = "snow"                                // UserAgent for snow
+	URL   = "https://www.grc.com/securitynow.htm" // url of main security now page.
+	SNURL = "https://media.grc.com/sn/"
 )
 
 type Conf struct {
@@ -47,7 +48,7 @@ func main() {
 	conf.SaveDir = os.ExpandEnv(conf.SaveDir)
 
 	// make the dir (if necessary)
-	err := os.MkdirAll(conf.SaveDir, 0664)
+	err := os.MkdirAll(conf.SaveDir, 764)
 	if err != nil {
 		fmt.Printf("error making save dir: %s\n", err)
 		return
@@ -72,4 +73,15 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+
+	// download
+	// TODO: add concurrency
+	mp3 := NewMP3(conf)
+	cnt, n, err := mp3.Process()
+	if err != nil {
+		fmt.Printf("processing error: %s\n", err)
+		fmt.Printf("%d of %d episodes were successfully downloaded\n", cnt, mp3.stopEpisode-mp3.startEpisode)
+		fmt.Printf("%d bytes downloaded\n", n)
+	}
+	fmt.Printf("processing complete: %d episodes totalling %d bytes were downloaded\n", cnt, n)
 }
