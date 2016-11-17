@@ -6,6 +6,11 @@ import (
 	"os"
 )
 
+const (
+	UA  = "snow"                                // UserAgent for snow
+	URL = "https://www.grc.com/securitynow.htm" // url of main security now page.
+)
+
 type Conf struct {
 	lastN        int    // download the last n episodes. If 0, all are downloaded unless start is specified
 	startEpisode int    // episode number to start downloading from; this takes precedence over lastN
@@ -47,4 +52,11 @@ func main() {
 		fmt.Printf("error making save dir: %s\n", err)
 		return
 	}
+
+	// check the latest episode number; this will be the limit
+	i, err := GetLastEpisodeNumber()
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println(i)
 }
