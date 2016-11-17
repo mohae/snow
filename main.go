@@ -23,7 +23,8 @@ type Conf struct {
 var conf Conf
 
 func init() {
-	flag.IntVar(&conf.lastN, "lastn", 0, "download the last n episodes; 0 means all")
+	// -1 means last episode; the default
+	flag.IntVar(&conf.lastN, "lastn", 1, "download the last n episodes; 0 means all")
 	flag.IntVar(&conf.startEpisode, "start", 0, "episode number from which to start downloading")
 	flag.IntVar(&conf.stopEpisode, "stop", 0, "episode number at which to stop downloading")
 	flag.BoolVar(&conf.lowQuality, "lq", false, "download the low quality version: 16kbps mp3")

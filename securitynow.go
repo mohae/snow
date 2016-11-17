@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 
@@ -95,7 +94,7 @@ func (m *MP3) HighQuality(i int) (int64, error) {
 	}
 	defer f.Close()
 	// Get the file
-	resp, err := http.Get(path.Join(SNURL, file))
+	resp, err := http.Get(SNURL + file)
 	if err != nil {
 		return 0, fmt.Errorf("error processing %s: %s", file, err)
 	}
@@ -109,6 +108,10 @@ func (m *MP3) HighQuality(i int) (int64, error) {
 				return b, nil
 			}
 			return b, fmt.Errorf("error processing %s: %s", file, err)
+		}
+		// no bytes copied == done
+		if n == 0 {
+			return b, nil
 		}
 	}
 }
@@ -188,15 +191,18 @@ func setEpisodeRange(i int, cnf *Conf) error {
 	// lastN processing means we'll always stop at current episode
 	cnf.stopEpisode = i
 
-	// if lastN processing is being done, set the start point
-	if cnf.lastN > 0 {
-		cnf.startEpisode = i - cnf.lastN + 1
-		// make sure it's within range
-		if cnf.startEpisode < 0 {
-			cnf.startEpisode = 1
-		}
-	} else {
-		// otherwise everything will be downloaded, start at episode 1
+	switch cnf.lastN {
+	case 1: // -1 means last episode
+		cnf.startEpisode = i
+		return nil
+	case 0: // all episodes
+		cnf.startEpisode = 1
+		return nil
+	}
+	// otherwise calculate n episodes ago
+	cnf.startEpisode = i - cnf.lastN + 1
+	// make sure it's within range
+	if cnf.startEpisode < 0 {
 		cnf.startEpisode = 1
 	}
 	return nil

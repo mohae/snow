@@ -131,6 +131,12 @@ func TestSetEpisodeRange(t *testing.T) {
 	}{
 		{
 			i:           100,
+			cnf:         Conf{lastN: 1, startEpisode: 0, stopEpisode: 0},
+			expected:    Conf{lastN: 1, startEpisode: 100, stopEpisode: 100},
+			expectedErr: "",
+		},
+		{
+			i:           100,
 			cnf:         Conf{lastN: 0, startEpisode: 0, stopEpisode: 0},
 			expected:    Conf{lastN: 0, startEpisode: 1, stopEpisode: 100},
 			expectedErr: "",
