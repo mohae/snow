@@ -20,19 +20,32 @@ type Conf struct {
 	SaveDir      string `json:"save_dir"` // directory to save the downloads to; if empty, $HOME/Downloads/security-now/ will be used
 }
 
-var conf Conf
+var (
+	conf         Conf
+	lastN        int
+	startEpisode int
+	stopEpisode  int
+	lowQuality   bool
+	saveDir      string
+)
 
 func init() {
 	// -1 means last episode; the default
-	flag.IntVar(&conf.lastN, "lastn", 1, "download the last n episodes; 0 means all")
-	flag.IntVar(&conf.startEpisode, "start", 0, "episode number from which to start downloading")
-	flag.IntVar(&conf.stopEpisode, "stop", 0, "episode number at which to stop downloading")
-	flag.BoolVar(&conf.lowQuality, "lq", false, "download the low quality version: 16kbps mp3")
-	flag.StringVar(&conf.SaveDir, "savedir", "$HOME/Downloads/security-now", "save directory")
+	flag.IntVar(&lastN, "lastn", 1, "download the last n episodes; 0 means all")
+	flag.IntVar(&startEpisode, "start", 0, "episode number from which to start downloading")
+	flag.IntVar(&stopEpisode, "stop", 0, "episode number at which to stop downloading")
+	flag.BoolVar(&lowQuality, "lq", false, "download the low quality version: 16kbps mp3")
+	flag.StringVar(&saveDir, "savedir", "$HOME/Downloads/security-now", "save directory")
 }
 
 func main() {
 	flag.Parse()
+
+	conf.lastN = lastN
+	conf.startEpisode = startEpisode
+	conf.stopEpisode = stopEpisode
+	conf.lowQuality = lowQuality
+	conf.SaveDir = saveDir
 
 	// check flags for validity
 	if conf.SaveDir == "" {
@@ -84,5 +97,5 @@ func main() {
 		fmt.Printf("%d of %d episodes were successfully downloaded\n", cnt, mp3.stopEpisode-mp3.startEpisode)
 		fmt.Printf("%d bytes downloaded\n", n)
 	}
-	fmt.Printf("processing complete: %d episodes totalling %d bytes were downloaded\n", cnt, n)
+	fmt.Printf("processing complete: %d of %d episodes totalling %d bytes were downloaded\n", cnt, conf.stopEpisode-conf.startEpisode+1, n)
 }

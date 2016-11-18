@@ -45,7 +45,9 @@ func (m *MP3) Process() (cnt int, bytes int64, err error) {
 		if err != nil {
 			return cnt, bytes, err
 		}
-		cnt++
+		if n > 0 { // only count the episode as downloaded if something was downloaded
+			cnt++
+		}
 	}
 	return cnt, bytes, nil
 }
@@ -54,6 +56,11 @@ func (m *MP3) Process() (cnt int, bytes int64, err error) {
 func (m *MP3) LowQuality(i int) (int64, error) {
 	file := fmt.Sprintf("sn-%03d-lq.mp3", i)
 	dest := filepath.Join(m.saveDir, file)
+	// if it already exists; don't do anything
+	if fileExists(dest) {
+		printSkipMessage(file, "file exists")
+		return 0, nil
+	}
 	// open the save file
 	f, err := os.OpenFile(dest, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
 	if err != nil {
@@ -89,6 +96,11 @@ func (m *MP3) LowQuality(i int) (int64, error) {
 func (m *MP3) HighQuality(i int) (int64, error) {
 	file := fmt.Sprintf("sn-%03d.mp3", i)
 	dest := filepath.Join(m.saveDir, file)
+	// if it already exists; don't do anything
+	if fileExists(dest) {
+		printSkipMessage(file, "file exists")
+		return 0, nil
+	}
 	// open the save file
 	f, err := os.OpenFile(dest, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
 	if err != nil {
@@ -214,4 +226,22 @@ func setEpisodeRange(i int, cnf *Conf) error {
 
 func printDownloadMessage(episode int, n int64, name string) {
 	fmt.Printf("downloaded episode %d, totalling %d bytes, as %s\n", episode, n, name)
+}
+
+// technically speaking this is racy, but if you're using snow and mucking with
+// security now episodes in the target dir...well don't blame snow for what
+// does or does not happen. If any error, other than IsNotExist occurs, a true
+// will be returned; this may be incorrect handling, but this is what happens
+// when only a bool is returned.
+func fileExists(name string) bool {
+	_, err := os.Stat(name)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
+// prints
+func printSkipMessage(name, reason string) {
+	fmt.Printf("skipping %s: %s\n", name, reason)
 }
