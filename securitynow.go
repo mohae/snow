@@ -28,15 +28,17 @@ func (d *Download) skip(s string) {
 
 // MP3 handles the downloading of MP3 episodes
 type MP3 struct {
-	concurrency int
-	// start/stop are inclusive
-	startEpisode int
-	stopEpisode  int
+	// config
+	concurrency  int
+	startEpisode int // inclusive
+	stopEpisode  int // inclusive
 	saveDir      string
-	workCh       chan int      // channel for sending work to
-	resultCh     chan Download // channel for sending result of download to
-	downloads    []Download    // results of the downloads
-	Get          func(i int) Download
+
+	// processing related stuff
+	workCh    chan int      // channel for sending work to
+	resultCh  chan Download // channel for sending result of download to
+	downloads []Download    // results of the downloads
+	Get       func(i int) Download
 }
 
 // Returns a MP3 processor.
@@ -115,7 +117,7 @@ func (m *MP3) LowQuality(i int) Download {
 // HighQuality downloads the high quality 64Kbps version of an episode.
 func (m *MP3) HighQuality(i int) Download {
 	var d Download
-	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
+	d.Name = fmt.Sprintf("sn-%03d.mp3", i)
 	d.Path = filepath.Join(m.saveDir, d.Name)
 	fmt.Println("download:" + d.Name)
 	return m.Download(d)
