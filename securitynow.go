@@ -193,6 +193,35 @@ func (m *MP3) Download(d Download) Download {
 	return d
 }
 
+// Message returns
+func (m *MP3) Message() string {
+	msg := fmt.Sprintf("\n%d episodes processed\n", len(m.downloads))
+	var skipped, errs, success int
+	var n int64
+	for _, v := range m.downloads {
+		if v.skipped {
+			skipped++
+			continue
+		}
+		if v.err != nil {
+			errs++
+			continue
+		}
+		success++
+		n += v.n
+	}
+	if errs > 0 {
+		msg += fmt.Sprintf("%d downloads resulted in an error\n", errs)
+	}
+	if skipped > 0 {
+		msg += fmt.Sprintf("%d episodes were skipped\n", skipped)
+	}
+	if success > 0 {
+		msg += fmt.Sprintf("%d episodes totalling %d bytes were downloaded\n", success, n)
+	}
+	return msg
+}
+
 // technically speaking this is racy, but if you're using snow and mucking with
 // security now episodes in the target dir...well don't blame snow for what
 // does or does not happen. If any error, other than IsNotExist occurs, a true

@@ -118,12 +118,11 @@ func main() {
 	}
 
 	// download
-	// TODO: add concurrency
 	mp3 := NewMP3(conf)
 	mp3.Process()
 
-	// TODO update completion messages
-	fmt.Println("done")
+	// summary message
+	fmt.Println(mp3.Message())
 }
 
 // Verbose prints out messages if verbose.
