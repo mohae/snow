@@ -66,12 +66,12 @@ func (m *MP3) Process() {
 	}
 }
 
-// Download downloads episodes.
-func (m *MP3) Download() {
+// GetEpisodes downloads episodes.
+func (m *MP3) GetEpisodes() {
 	var n int64
 	// work until work channel is closed
 	for {
-		fmt.Println("downloader")
+		fmt.Println("get episodes")
 		i, ok := <-m.workCh
 		fmt.Println(i, ok)
 		if !ok {
@@ -89,41 +89,7 @@ func (m *MP3) LowQuality(i int) Download {
 	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
 	d.Path = filepath.Join(m.saveDir, d.Name)
 	fmt.Println("download:" + d.Name)
-	// if it already exists; don't do anything
-	if fileExists(d.Path) {
-		d.skip("file exists")
-		return d
-	}
-	// open the save file
-	f, err := os.OpenFile(d.Path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
-	if err != nil {
-		d.err = err
-		return d
-	}
-	defer f.Close()
-	// Get the file
-	resp, err := http.Get(SNURL + d.Name)
-	if err != nil {
-		d.err = err
-		return d
-	}
-	defer resp.Body.Close()
-	for {
-		n, err := io.Copy(f, resp.Body)
-		d.n += n
-		if err != nil {
-			if err == io.EOF {
-				return d
-			}
-			d.err = err
-			return d
-		}
-		// no bytes copied == done
-		if n == 0 {
-			break
-		}
-	}
-	return d
+	return m.Download(d)
 }
 
 // HighQuality downloads the high quality 64Kbps version of an episode.
@@ -132,6 +98,11 @@ func (m *MP3) HighQuality(i int) Download {
 	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
 	d.Path = filepath.Join(m.saveDir, d.Name)
 	fmt.Println("download:" + d.Name)
+	return m.Download(d)
+}
+
+// Download handles the actual download.
+func (m *MP3) Download(d Download) Download {
 	// if it already exists; don't do anything
 	if fileExists(d.Path) {
 		d.skip("file exists")
