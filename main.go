@@ -21,6 +21,7 @@ type Conf struct {
 	startEpisode int    // episode number to start downloading from; this takes precedence over lastN
 	stopEpisode  int    // episode number to stop downloading at; if 0 everything up to current will be downloaded
 	lowQuality   bool   // download the low quality version
+	overwrite    bool   // overwrite existing file, if one exists
 	ConcurrentDL int    `json:"concurrent_downloads"` // the number of episodes to download concurrently
 	SaveDir      string `json:"save_dir"`             // directory to save the downloads to; if empty, $HOME/Downloads/security-now/ will be used
 }
@@ -32,6 +33,7 @@ var (
 	stopEpisode  int
 	concurrency  int
 	lowQuality   bool
+	overwrite    bool
 	saveDir      string
 
 	//verbose provides more detailed output
@@ -60,6 +62,7 @@ func init() {
 	flag.IntVar(&concurrency, "concurrency", concurrentDL, "number of episodes to concurrently download")
 	flag.BoolVar(&lowQuality, "lq", false, "download the low quality version: 16Kbps mp3")
 	flag.BoolVar(&verbose, "verbose", false, "verbose output")
+	flag.BoolVar(&overwrite, "overwrite", false, "overwrite existing file, if one exists")
 	flag.StringVar(&saveDir, "savedir", "$HOME/Downloads/security-now", "save directory")
 }
 

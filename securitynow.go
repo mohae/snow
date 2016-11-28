@@ -55,6 +55,7 @@ func (d *Download) Error() string {
 // MP3 handles the downloading of MP3 episodes
 type MP3 struct {
 	// config
+	overwrite    bool
 	concurrency  int
 	startEpisode int // inclusive
 	stopEpisode  int // inclusive
@@ -70,6 +71,7 @@ type MP3 struct {
 // Returns a MP3 processor.
 func NewMP3(c Conf) *MP3 {
 	var mp3 MP3
+	mp3.overwrite = c.overwrite
 	mp3.concurrency = c.ConcurrentDL
 	mp3.startEpisode = c.startEpisode
 	mp3.stopEpisode = c.stopEpisode
@@ -149,8 +151,8 @@ func (m *MP3) HighQuality(i int) Download {
 
 // Download handles the actual download.
 func (m *MP3) Download(d Download) Download {
-	// if it already exists; don't do anything
-	if fileExists(d.Path) {
+	// if not overwrting existing files and it already exists; don't do anything
+	if !m.overwrite && fileExists(d.Path) {
 		d.skipped = true
 		return d
 	}
