@@ -1,3 +1,7 @@
+// Apache License Version 2.0
+// http://www.apache.org/licenses/
+// Copyright (c) 2016 Joel Scoble
+// See LICENSE file for license text.
 package main
 
 import (

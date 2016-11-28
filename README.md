@@ -63,4 +63,4 @@ stop|0|int|episode number at which to stop downloading
 savedir|$HOME/Downloads/security-now|string|save directory  
 
 ## License
-The MIT License (MIT)
+Apache License, Version 2.0
