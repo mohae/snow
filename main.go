@@ -91,11 +91,8 @@ func main() {
 	// download
 	// TODO: add concurrency
 	mp3 := NewMP3(conf)
-	cnt, n, err := mp3.Process()
-	if err != nil {
-		fmt.Printf("processing error: %s\n", err)
-		fmt.Printf("%d of %d episodes were successfully downloaded\n", cnt, mp3.stopEpisode-mp3.startEpisode)
-		fmt.Printf("%d bytes downloaded\n", n)
-	}
-	fmt.Printf("processing complete: %d of %d episodes totalling %d bytes were downloaded\n", cnt, conf.stopEpisode-conf.startEpisode+1, n)
+	mp3.Process()
+
+	// TODO update completion messages
+	fmt.Println("done")
 }

@@ -12,12 +12,30 @@ import (
 	"golang.org/x/net/html"
 )
 
+// download holds information about a given download
+type Download struct {
+	Name    string // the name of the thing downloaded
+	Path    string // the path of the save file; including name
+	skipped bool
+	n       int64 // number of bytes downloaded
+	err     error // error incountered, if any
+}
+
+func (d *Download) skip(s string) {
+	d.skipped = true
+	fmt.Printf("skipped %s: %s at %s\n", d.Name, s, d.Path)
+}
+
 // MP3 handles the downloading of MP3 episodes
 type MP3 struct {
+	// start/stop are inclusive
 	startEpisode int
 	stopEpisode  int
 	saveDir      string
-	Get          func(i int) (int64, error)
+	workCh       chan int      // channel for sending work to
+	resultCh     chan Download // channel for sending result of download to
+	downloads    []Download    // results of the downloads
+	Get          func(i int) Download
 }
 
 // Returns a MP3 processor.
@@ -26,6 +44,8 @@ func NewMP3(c Conf) *MP3 {
 	mp3.startEpisode = c.startEpisode
 	mp3.stopEpisode = c.stopEpisode
 	mp3.saveDir = c.SaveDir
+	mp3.workCh = make(chan int)
+	mp3.resultCh = make(chan Download)
 	if c.lowQuality {
 		mp3.Get = mp3.LowQuality
 		return &mp3
@@ -38,98 +58,115 @@ func NewMP3(c Conf) *MP3 {
 // the number of successfully processed episodes, the total bytes downloaded
 // and the error are returned. If the process completes without an error, the
 // number of episodes downloaded along with the bytes downloaded are returned.
-func (m *MP3) Process() (cnt int, bytes int64, err error) {
+func (m *MP3) Process() {
+	m.downloads = make([]Download, 0, m.stopEpisode-m.startEpisode+1)
 	for i := m.startEpisode; i <= m.stopEpisode; i++ {
-		n, err := m.Get(i)
-		bytes += n
-		if err != nil {
-			return cnt, bytes, err
-		}
-		if n > 0 { // only count the episode as downloaded if something was downloaded
-			cnt++
-		}
+		d := m.Get(i)
+		m.downloads = append(m.downloads, d)
 	}
-	return cnt, bytes, nil
+}
+
+// Download downloads episodes.
+func (m *MP3) Download() {
+	var n int64
+	// work until work channel is closed
+	for {
+		fmt.Println("downloader")
+		i, ok := <-m.workCh
+		fmt.Println(i, ok)
+		if !ok {
+			_ = n
+			return
+		}
+		fmt.Println(i)
+		m.Get(i)
+	}
 }
 
 // LowQuality downloads the high quality 16Kbps version of an episode.
-func (m *MP3) LowQuality(i int) (int64, error) {
-	file := fmt.Sprintf("sn-%03d-lq.mp3", i)
-	dest := filepath.Join(m.saveDir, file)
+func (m *MP3) LowQuality(i int) Download {
+	var d Download
+	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
+	d.Path = filepath.Join(m.saveDir, d.Name)
+	fmt.Println("download:" + d.Name)
 	// if it already exists; don't do anything
-	if fileExists(dest) {
-		printSkipMessage(file, "file exists")
-		return 0, nil
+	if fileExists(d.Path) {
+		d.skip("file exists")
+		return d
 	}
 	// open the save file
-	f, err := os.OpenFile(dest, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(d.Path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
 	if err != nil {
-		return 0, fmt.Errorf("error processing %s: %s", dest, err)
+		d.err = err
+		return d
 	}
 	defer f.Close()
 	// Get the file
-	resp, err := http.Get(SNURL + file)
+	resp, err := http.Get(SNURL + d.Name)
 	if err != nil {
-		return 0, fmt.Errorf("error processing %s: %s", file, err)
+		d.err = err
+		return d
 	}
 	defer resp.Body.Close()
-	var b int64
 	for {
 		n, err := io.Copy(f, resp.Body)
-		b += n
+		d.n += n
 		if err != nil {
 			if err == io.EOF {
-				return b, nil
+				return d
 			}
-			return b, fmt.Errorf("error processing %s: %s", file, err)
+			d.err = err
+			return d
 		}
 		// no bytes copied == done
 		if n == 0 {
 			break
 		}
 	}
-	printDownloadMessage(i, b, file)
-	return b, nil
+	return d
 }
 
 // HighQuality downloads the high quality 64Kbps version of an episode.
-func (m *MP3) HighQuality(i int) (int64, error) {
-	file := fmt.Sprintf("sn-%03d.mp3", i)
-	dest := filepath.Join(m.saveDir, file)
+func (m *MP3) HighQuality(i int) Download {
+	var d Download
+	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
+	d.Path = filepath.Join(m.saveDir, d.Name)
+	fmt.Println("download:" + d.Name)
 	// if it already exists; don't do anything
-	if fileExists(dest) {
-		printSkipMessage(file, "file exists")
-		return 0, nil
+	if fileExists(d.Path) {
+		d.skip("file exists")
+		return d
 	}
 	// open the save file
-	f, err := os.OpenFile(dest, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
+	f, err := os.OpenFile(d.Path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
 	if err != nil {
-		return 0, fmt.Errorf("error processing %s: %s", dest, err)
+		d.err = err
+		return d
 	}
 	defer f.Close()
 	// Get the file
-	resp, err := http.Get(SNURL + file)
+	resp, err := http.Get(SNURL + d.Name)
 	if err != nil {
-		return 0, fmt.Errorf("error processing %s: %s", file, err)
+		d.err = err
+		return d
 	}
 	defer resp.Body.Close()
-	var b int64
 	for {
 		n, err := io.Copy(f, resp.Body)
-		b += n
+		d.n += n
 		if err != nil {
 			if err == io.EOF {
-				return b, nil
+				return d
 			}
-			return b, fmt.Errorf("error processing %s: %s", file, err)
+			d.err = err
+			return d
 		}
 		// no bytes copied == done
 		if n == 0 {
 			break
 		}
 	}
-	printDownloadMessage(i, b, file)
-	return b, nil
+	return d
 }
 
 // GetLastEpisodenNumber returns the number of the most recent episode. This
@@ -239,9 +276,4 @@ func fileExists(name string) bool {
 		return false
 	}
 	return true
-}
-
-// prints
-func printSkipMessage(name, reason string) {
-	fmt.Printf("skipping %s: %s\n", name, reason)
 }
