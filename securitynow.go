@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/dustin/go-humanize"
 	"golang.org/x/net/html"
 )
 
@@ -17,8 +18,8 @@ type Download struct {
 	Name    string // the name of the thing downloaded
 	Path    string // the path of the save file; including name
 	skipped bool
-	n       int64 // number of bytes downloaded
-	err     error // error incountered, if any
+	n       uint64 // number of bytes downloaded
+	err     error  // error incountered, if any
 }
 
 // PrintResultMessage prints the result of the download.
@@ -31,7 +32,7 @@ func (d *Download) PrintResultMessage() {
 		fmt.Println(d)
 		return
 	}
-	fmt.Printf("%s: %d bytes downloaded as %s\n", d.Name, d.n, d.Path)
+	fmt.Printf("%s: %s downloaded as %s\n", d.Name, humanize.Bytes(d.n), d.Path)
 }
 
 // SkipMessage creates the message string for skipped downloads. This also
@@ -49,7 +50,7 @@ func (d *Download) Error() string {
 	if d.n == 0 {
 		return fmt.Sprintf("%s: download error: %s", d.Name, d.err.Error())
 	}
-	return fmt.Sprintf("%s: %d bytes downloaded as %s with an error: %s\n", d.Name, d.n, d.Path, d.err.Error())
+	return fmt.Sprintf("%s: %s downloaded as %s with an error: %s\n", d.Name, humanize.Bytes(d.n), d.Path, d.err.Error())
 }
 
 // MP3 handles the downloading of MP3 episodes
@@ -177,7 +178,7 @@ func (m *MP3) Download(d Download) Download {
 	defer resp.Body.Close()
 	for {
 		n, err := io.Copy(f, resp.Body)
-		d.n += n
+		d.n += uint64(n)
 		if err != nil {
 			if err == io.EOF {
 				return d
@@ -197,7 +198,7 @@ func (m *MP3) Download(d Download) Download {
 func (m *MP3) Message() string {
 	msg := fmt.Sprintf("\n%d episodes processed\n", len(m.downloads))
 	var skipped, errs, success int
-	var n int64
+	var n uint64
 	for _, v := range m.downloads {
 		if v.skipped {
 			skipped++
@@ -217,7 +218,7 @@ func (m *MP3) Message() string {
 		msg += fmt.Sprintf("%d episodes were skipped\n", skipped)
 	}
 	if success > 0 {
-		msg += fmt.Sprintf("%d episodes totalling %d bytes were downloaded\n", success, n)
+		msg += fmt.Sprintf("%d episodes totalling %s were downloaded\n", success, humanize.Bytes(n))
 	}
 	return msg
 }
