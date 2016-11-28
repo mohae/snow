@@ -33,6 +33,9 @@ var (
 	concurrency  int
 	lowQuality   bool
 	saveDir      string
+
+	//verbose provides more detailed output
+	verbose bool
 )
 
 func (c *Conf) Concurrency(i int) {
@@ -55,7 +58,8 @@ func init() {
 	flag.IntVar(&startEpisode, "start", 0, "episode number from which to start downloading")
 	flag.IntVar(&stopEpisode, "stop", 0, "episode number at which to stop downloading")
 	flag.IntVar(&concurrency, "concurrency", concurrentDL, "number of episodes to concurrently download")
-	flag.BoolVar(&lowQuality, "lq", false, "download the low quality version: 16kbps mp3")
+	flag.BoolVar(&lowQuality, "lq", false, "download the low quality version: 16Kbps mp3")
+	flag.BoolVar(&verbose, "verbose", false, "verbose output")
 	flag.StringVar(&saveDir, "savedir", "$HOME/Downloads/security-now", "save directory")
 }
 
@@ -117,4 +121,12 @@ func main() {
 
 	// TODO update completion messages
 	fmt.Println("done")
+}
+
+// Verbose prints out messages if verbose.
+func Verbose(s string) {
+	if !verbose {
+		return
+	}
+	fmt.Println(s)
 }

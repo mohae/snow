@@ -21,9 +21,35 @@ type Download struct {
 	err     error // error incountered, if any
 }
 
-func (d *Download) skip(s string) {
-	d.skipped = true
-	fmt.Printf("skipped %s: %s at %s\n", d.Name, s, d.Path)
+// PrintResultMessage prints the result of the download.
+func (d *Download) PrintResultMessage() {
+	if d.skipped {
+		fmt.Println(d.SkipMessage())
+		return
+	}
+	if d.err != nil {
+		fmt.Println(d)
+		return
+	}
+	fmt.Printf("%s: %d bytes downloaded as %s\n", d.Name, d.n, d.Path)
+}
+
+// SkipMessage creates the message string for skipped downloads. This also
+// handles errors related to skipping the download.
+func (d *Download) SkipMessage() string {
+	if d.err == nil {
+		return fmt.Sprintf("%s: skipped, episode exists as %s", d.Name, d.Path)
+	}
+	return fmt.Sprintf("%s skipped: check file error: %s\n", d.Name, d.err)
+}
+
+// Error handles formatting of an error message as a string. This handles
+// non-skip errors. If skipped SkipMessage should be used.
+func (d *Download) Error() string {
+	if d.n == 0 {
+		return fmt.Sprintf("%s: download error: %s", d.Name, d.err.Error())
+	}
+	return fmt.Sprintf("%s: %d bytes downloaded as %s with an error: %s\n", d.Name, d.n, d.Path, d.err.Error())
 }
 
 // MP3 handles the downloading of MP3 episodes
@@ -67,24 +93,24 @@ func (m *MP3) Process() {
 		go m.GetEpisodes()
 	}
 
-	fmt.Println("downloading...")
+	Verbose("downloading...")
 
 	go func() {
 		for i := m.startEpisode; i <= m.stopEpisode; i++ {
-			fmt.Println(i)
 			m.workCh <- i
 		}
 	}()
 
 	// we know how many results we're going to get so we just count the results
 	for i := 0; i < (m.stopEpisode - m.startEpisode + 1); i++ {
-		fmt.Printf("waiting for result %d\n", i+1)
+		Verbose(fmt.Sprintf("waiting for result %d", i+1))
 		v := <-m.resultCh
+		v.PrintResultMessage()
 		m.downloads = append(m.downloads, v)
-		fmt.Println(v)
+		Verbose(fmt.Sprintf("%#v", v))
 	}
 
-	fmt.Println("complete...")
+	Verbose("complete...")
 
 	return
 }
@@ -93,15 +119,13 @@ func (m *MP3) Process() {
 func (m *MP3) GetEpisodes() {
 	// work until work channel is closed
 	for {
-		fmt.Println("get episodes")
+		Verbose("get episodes")
 		i, ok := <-m.workCh
-		fmt.Println(i, ok)
 		if !ok {
 			return
 		}
-		fmt.Println(i)
 		m.resultCh <- m.Get(i)
-		fmt.Println("result sent")
+		Verbose("result sent")
 	}
 }
 
@@ -110,7 +134,7 @@ func (m *MP3) LowQuality(i int) Download {
 	var d Download
 	d.Name = fmt.Sprintf("sn-%03d-lq.mp3", i)
 	d.Path = filepath.Join(m.saveDir, d.Name)
-	fmt.Println("download:" + d.Name)
+	Verbose("download:" + d.Name)
 	return m.Download(d)
 }
 
@@ -119,7 +143,7 @@ func (m *MP3) HighQuality(i int) Download {
 	var d Download
 	d.Name = fmt.Sprintf("sn-%03d.mp3", i)
 	d.Path = filepath.Join(m.saveDir, d.Name)
-	fmt.Println("download:" + d.Name)
+	Verbose("download:" + d.Name)
 	return m.Download(d)
 }
 
@@ -127,7 +151,7 @@ func (m *MP3) HighQuality(i int) Download {
 func (m *MP3) Download(d Download) Download {
 	// if it already exists; don't do anything
 	if fileExists(d.Path) {
-		d.skip("file exists")
+		d.skipped = true
 		return d
 	}
 	// open the save file
