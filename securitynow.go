@@ -152,10 +152,15 @@ func (m *MP3) HighQuality(i int) Download {
 // Download handles the actual download.
 func (m *MP3) Download(d Download) Download {
 	// if not overwrting existing files and it already exists; don't do anything
-	if !m.overwrite && fileExists(d.Path) {
-		d.skipped = true
+	t, err := m.shouldSkip(d.Path)
+	d.skipped = t
+	if err != nil {
+		d.err = err
+	}
+	if t { // if should skip, return
 		return d
 	}
+
 	// open the save file
 	f, err := os.OpenFile(d.Path, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0664)
 	if err != nil {
@@ -186,6 +191,25 @@ func (m *MP3) Download(d Download) Download {
 		}
 	}
 	return d
+}
+
+// technically speaking this is racy, but if you're using snow and mucking with
+// security now episodes in the target dir...well don't blame snow for what
+// does or does not happen. If any error, other than IsNotExist occurs, a true
+// will be returned; this may be incorrect handling, but this is what happens
+// when only a bool is returned.
+func (m *MP3) shouldSkip(n string) (bool, error) {
+	if m.overwrite {
+		return false, nil
+	}
+	_, err := os.Stat(n)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return true, err
+	}
+	return true, nil
 }
 
 // GetLastEpisodenNumber returns the number of the most recent episode. This
@@ -282,17 +306,4 @@ func setEpisodeRange(i int, cnf *Conf) error {
 
 func printDownloadMessage(episode int, n int64, name string) {
 	fmt.Printf("downloaded episode %d, totalling %d bytes, as %s\n", episode, n, name)
-}
-
-// technically speaking this is racy, but if you're using snow and mucking with
-// security now episodes in the target dir...well don't blame snow for what
-// does or does not happen. If any error, other than IsNotExist occurs, a true
-// will be returned; this may be incorrect handling, but this is what happens
-// when only a bool is returned.
-func fileExists(name string) bool {
-	_, err := os.Stat(name)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return true
 }
