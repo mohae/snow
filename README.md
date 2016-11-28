@@ -1,5 +1,5 @@
 # snow
-
+[![Build Status](https://travis-ci.org/mohae/snow.png)](https://travis-ci.org/mohae/snow)
 Snow is a [security now podcast](https://twit.tv/shows/security-now) downloader.
 
 By default, only the latest episode is downloaded, unless it already exists in the destination directory.
@@ -21,6 +21,8 @@ Assuming you have [Go](https://golang.org) installed:
     go install github.com/mohae/snow
 
 A `snow` executable will be in your `$GOPATH/bin` directory.
+
+If you don't have Go installed see either https://golang.org/doc/install or use the appropriate  [install-go](https://githug.com/mohae/install-go) script.
 
 ### Run
 
