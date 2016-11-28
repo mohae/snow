@@ -7,9 +7,13 @@ import (
 )
 
 const (
-	UA    = "snow"                                // UserAgent for snow
-	URL   = "https://www.grc.com/securitynow.htm" // url of main security now page.
-	SNURL = "https://media.grc.com/sn/"
+	UA           = "snow"                                // UserAgent for snow
+	URL          = "https://www.grc.com/securitynow.htm" // url of main security now page.
+	SNURL        = "https://media.grc.com/sn/"
+	concurrentDL = 1 // default number of episodes to download concurrently
+	// if a value > maxConcurrency is specified, maxConcurrency will
+	// be used and a message notifying the user will be emitted.
+	maxConcurrentDL = 4 // maximum number of episodes to download concurrently
 )
 
 type Conf struct {
@@ -17,7 +21,8 @@ type Conf struct {
 	startEpisode int    // episode number to start downloading from; this takes precedence over lastN
 	stopEpisode  int    // episode number to stop downloading at; if 0 everything up to current will be downloaded
 	lowQuality   bool   // download the low quality version
-	SaveDir      string `json:"save_dir"` // directory to save the downloads to; if empty, $HOME/Downloads/security-now/ will be used
+	ConcurrentDL int    `json:"concurrent_downloads"` // the number of episodes to download concurrently
+	SaveDir      string `json:"save_dir"`             // directory to save the downloads to; if empty, $HOME/Downloads/security-now/ will be used
 }
 
 var (
@@ -25,15 +30,31 @@ var (
 	lastN        int
 	startEpisode int
 	stopEpisode  int
+	concurrency  int
 	lowQuality   bool
 	saveDir      string
 )
+
+func (c *Conf) Concurrency(i int) {
+	if i == 0 {
+		c.ConcurrentDL = concurrentDL
+		fmt.Printf("info: invalid download concurrency, %d was specified, snow will use it's default value: %d\n", i, concurrentDL)
+		return
+	}
+	if i > maxConcurrentDL {
+		c.ConcurrentDL = maxConcurrentDL
+		fmt.Printf("info: invalid download concurrency, %d was specified, snow will use it's maximum value: %d\n", i, maxConcurrentDL)
+		return
+	}
+	c.ConcurrentDL = i
+}
 
 func init() {
 	// -1 means last episode; the default
 	flag.IntVar(&lastN, "lastn", 1, "download the last n episodes; 0 means all")
 	flag.IntVar(&startEpisode, "start", 0, "episode number from which to start downloading")
 	flag.IntVar(&stopEpisode, "stop", 0, "episode number at which to stop downloading")
+	flag.IntVar(&concurrency, "concurrency", concurrentDL, "number of episodes to concurrently download")
 	flag.BoolVar(&lowQuality, "lq", false, "download the low quality version: 16kbps mp3")
 	flag.StringVar(&saveDir, "savedir", "$HOME/Downloads/security-now", "save directory")
 }
@@ -46,6 +67,7 @@ func main() {
 	conf.stopEpisode = stopEpisode
 	conf.lowQuality = lowQuality
 	conf.SaveDir = saveDir
+	conf.Concurrency(concurrency) // set via method because the checking logic is part of conf
 
 	// check flags for validity
 	if conf.SaveDir == "" {

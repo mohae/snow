@@ -28,6 +28,7 @@ func (d *Download) skip(s string) {
 
 // MP3 handles the downloading of MP3 episodes
 type MP3 struct {
+	concurrency int
 	// start/stop are inclusive
 	startEpisode int
 	stopEpisode  int
@@ -41,6 +42,7 @@ type MP3 struct {
 // Returns a MP3 processor.
 func NewMP3(c Conf) *MP3 {
 	var mp3 MP3
+	mp3.concurrency = c.ConcurrentDL
 	mp3.startEpisode = c.startEpisode
 	mp3.stopEpisode = c.stopEpisode
 	mp3.saveDir = c.SaveDir
@@ -59,27 +61,45 @@ func NewMP3(c Conf) *MP3 {
 // and the error are returned. If the process completes without an error, the
 // number of episodes downloaded along with the bytes downloaded are returned.
 func (m *MP3) Process() {
-	m.downloads = make([]Download, 0, m.stopEpisode-m.startEpisode+1)
-	for i := m.startEpisode; i <= m.stopEpisode; i++ {
-		d := m.Get(i)
-		m.downloads = append(m.downloads, d)
+	for i := 0; i < m.concurrency; i++ {
+		go m.GetEpisodes()
 	}
+
+	fmt.Println("downloading...")
+
+	go func() {
+		for i := m.startEpisode; i <= m.stopEpisode; i++ {
+			fmt.Println(i)
+			m.workCh <- i
+		}
+	}()
+
+	// we know how many results we're going to get so we just count the results
+	for i := 0; i < (m.stopEpisode - m.startEpisode + 1); i++ {
+		fmt.Printf("waiting for result %d\n", i+1)
+		v := <-m.resultCh
+		m.downloads = append(m.downloads, v)
+		fmt.Println(v)
+	}
+
+	fmt.Println("complete...")
+
+	return
 }
 
 // GetEpisodes downloads episodes.
 func (m *MP3) GetEpisodes() {
-	var n int64
 	// work until work channel is closed
 	for {
 		fmt.Println("get episodes")
 		i, ok := <-m.workCh
 		fmt.Println(i, ok)
 		if !ok {
-			_ = n
 			return
 		}
 		fmt.Println(i)
-		m.Get(i)
+		m.resultCh <- m.Get(i)
+		fmt.Println("result sent")
 	}
 }
 
